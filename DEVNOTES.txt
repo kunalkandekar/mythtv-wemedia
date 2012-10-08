@@ -1,0 +1,142 @@
+DEV NOTES
+---------
+
+UPNP COMPLIANCE
+---------------
+As mentioned in the README, following the UPnP spec means ideally any 
+UPnP client should be able to talk to any UPnP server. However, this may
+not always be the case as there are often minor gaps in the specifica-
+tion that lead to differences in implementation. For instance, the spec 
+details how the playing or recording of an A/V stream is initiated over 
+UPnP, but how the video is actually streamed is left open to clients and
+servers to implement (although there are recommendations).
+
+In our case, we make the video available for streaming over HTTP at the 
+URL in the resource tag (<res ..>) in the UPnP EPG results.
+
+Also, there are errors in implementation. We have done our best to 
+comply with the UPnP standard, but due to time and other pressures, we 
+have not been able to verify how  accurately we have implemented the 
+specifications. We have not tested it with any UPnP clients other than 
+the WeMedia client. 
+
+There are probably at least some inaccuracies in the Service Control 
+Protocol Document (SCPD) XML file regarding Scheduled Recording Services
+(SRS_scpd.xml) that need to be ironed out. The SCPD describes what capa-
+bilities the UPnP device has. Also certain UPnP methods return similar 
+details, which we may have implemented inaccurately.
+
+These inaccuracies may mis-represent what the device can do and how it
+expects requests to be structured. Hence, other UPnP clients may not be 
+able to successfully communicate with MythTV in certain situations.
+
+Certain methods recommended by the UPnP spec have not been implemented 
+either, as MythTV does not support them. However, I think we have imple-
+mented all required methods.
+
+
+LIVE TV TRANSCODER
+------------------
+The Live TV transcoder is designed specially to transcode the live TV 
+video and audio as it is being recorded.
+
+It has only been tested on a mpeg2-ts input file. It transcodes by 
+default to Flash Video format (.flv), since the WeMedia client is built
+on Adobe AIR, but it could theoretically be used to transcode to several
+other formats and codecs that libavcodec supports. However we haven't 
+tested most of these other than mpeg4, mpeg2 and libx264.
+
+Currently, it sometimes is unable to handle HD input very well, gene-
+rating lots of artifacts and blocky video for fast moving scenes. 
+
+It can currently potentially transcode to the following video codecs:
+- flv (the default)
+- mpeg4
+- wmv2
+- mpeg2
+- h264 (unsupported by myth, need libx264 & some minor hacks to test it)
+- vp6 (untested)
+
+It can currently potentially transcode to the following audio codecs:
+- adpcmswf (the default for flv video if mp3 is not available)
+- mp3 (needs myth to have libmp3lame)
+- aac
+- mp2
+- ac3
+- s16le (16-bit ADPCM)
+- flac (untested)
+- wmav2 (untested)
+
+One neat aspect is that the client can specify what codecs, format and
+bitrates to transcode the recording to when requesting the video stream
+by specifying some HTTP GET request parameters in the URL. For instance, 
+the following URL requests Myth to fetch the video for channel ID 5002 
+being recorded from Live TV, and transcode it to the MPEG4 video codec, 
+using the mp4 video format and the AAC audio format, with a bitrate of 
+1500 Mb/s:
+
+http://192.168.1.2:6544/Myth/GetLiveTV?ChanId=5002&vcodec=mpeg4&vfmt=mp4
+&acodec=aac&vbitrate=1500
+
+The full list of HTTP GET request parameters is:
+vcodec      = video codec (supported codecs listed above)
+vfmt        = video format (those supported by libavcodec)
+vbitrate    = video bitrate in Kb/s
+acodec      = audio codec (supported codecs listed above)
+afmt        = audio format (not implemented currently)
+abitrate    = audio bitrate in Kb/s
+asamplerate = audio samplerate
+vheight     = height of transcoded video in pixels
+vwidth      = width of transcoded video in pixels
+vfrnum      = numerator of fractional video framerate 
+vfrden      = denominator of fractional video framerate 
+vdeintl     = video deinterlace flag (1/0)
+
+Another request parameter is the avt flag, which allows the MythXML web
+interface to generate UPnP AVT actions to start and stop live TV, e.g.
+the following URL will start recording live TV on channel ID 5002 and
+begin transcoding and streaming the video:
+
+http://192.168.1.2:6544/Myth/GetLiveTV?ChanId=5002&avt=1
+
+However, this is only for testing purposes, and the prefered way is to
+make the UPnP request separately. Also this trick does not always work
+very well, especially if MythTV gets sluggish for any reason.
+
+Another feature supported by the live transcoder is that existing rec-
+ordings can also be transcoded when requested via the MythXML web inter-
+face, simply by appending the appropriate HTTP GET request parameters.
+
+
+CHANGELOG
+---------
+Files Modified:
+- libs/libmythupnp/httprequest.cpp
+- libs/libmythupnp/httprequest.h
+- libs/libmythupnp/upnpcdsobjects.cpp
+- libs/libmythupnp/upnpcdsobjects.h
+- libs/libmythupnp/upnp.h
+- libs/libmythupnp/upnpcds.cpp
+- libs/libmythupnp/libmythupnp.pro
+- programs/mythbackend/upnpcdstv.cpp
+- programs/mythbackend/mythxml.cpp
+- programs/mythbackend/mythxml.h
+- programs/mythbackend/mediaserver.cpp
+- programs/mythbackend/mediaserver.h
+- programs/mythbackend/mainserver.cpp
+- programs/mythbackend/mainserver.h
+- programs/mythbackend/mythbackend.pro
+
+Files Added
+- libs/libmythupnp/upnpsrsobjects.cpp
+- libs/libmythupnp/upnpsrsobjects.h
+- programs/mythbackend/upnpcdsepg.cpp
+- programs/mythbackend/upnpcdsepg.h
+- programs/mythbackend/transcoder.cpp
+- programs/mythbackend/transcoder.h
+- programs/mythbackend/upnpsrs.cpp
+- programs/mythbackend/upnpsrs.h
+- programs/mythbackend/SRS_scpd.xml
+- programs/mythbackend/upnpavt.cpp
+- programs/mythbackend/upnpavt.h
+- programs/mythbackend/AVT_scpd.xml
